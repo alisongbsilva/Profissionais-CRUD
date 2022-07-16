@@ -89,15 +89,15 @@ namespace Profissionais_CRUD.Controllers
         [HttpPut("id")]
         public async Task<IActionResult> UpdateProfissional(Profissional updateQuery)
         {
-            var dbProfissional = await Context.Profissionais.FindAsync(updateQuery.Id);
-            if (dbProfissional == null)
+            var dbProfissional = await Context.Profissionais.AnyAsync(p => p.Id == updateQuery.Id);
+            if (!dbProfissional)
                 return BadRequest("Profissional não encontrado");
             
             Context.Profissionais.Update(updateQuery);
 
             await Context.SaveChangesAsync();
 
-            return Ok(await Context.Profissionais.ToListAsync());
+            return Ok(updateQuery);
         }
 
         [HttpDelete("id")]
