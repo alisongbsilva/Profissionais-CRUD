@@ -2,6 +2,8 @@
 using Microsoft.EntityFrameworkCore;
 using Profissionais_CRUD.Models;
 using Profissionais_CRUD.Util;
+using Profissionais_CRUD.ViewModels;
+using System.Linq;
 
 namespace Profissionais_CRUD.Controllers
 {
@@ -17,9 +19,34 @@ namespace Profissionais_CRUD.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll(string nome = null, int numeroRegistroInicio = 0, int numeroRegistroFim = 0, bool somenteAtivos = false)
         {
-            return Ok(await Context.Profissionais.ToListAsync());
+            var query = Context.Profissionais.AsQueryable();
+            if (!string.IsNullOrEmpty(nome))
+                query = query.Where(p => p.NomeCompleto.Contains(nome));
+
+            if (numeroRegistroInicio != 0)
+                query = query.Where(p => p.NumeroRegistro >= numeroRegistroInicio);
+
+            if (numeroRegistroFim != 0)
+                query = query.Where(p => p.NumeroRegistro <= numeroRegistroFim);
+
+            if (somenteAtivos)
+                query = query.Where(p => p.Ativo);
+
+            query = query.OrderBy(p => p.NomeCompleto);
+
+            var result = await query.ToListAsync();
+
+            return Ok(result.Select(p => new ProfissionalViewModel
+            {
+                NumeroRegistro = p.NumeroRegistro,
+                Nome = p.NomeCompleto,
+                CPF = p.CPF,
+                Ativo = p.Ativo,
+                DataCriacao = p.DataCriacao
+
+            }));
         }
 
         
@@ -38,19 +65,17 @@ namespace Profissionais_CRUD.Controllers
 
             List<int> listaRegistros = new List<int>();
 
+            if (Context.Profissionais.Any(p => p.NomeCompleto == profissional.NomeCompleto))
+                return BadRequest("Nome de usuário já existente.");
+
             await foreach (var prof in Context.Profissionais)
             {
-                if (prof.NomeCompleto == profissional.NomeCompleto)
-                    return BadRequest("Nome de usuário já existente.");
-
                 listaRegistros.Add(prof.NumeroRegistro);
             }
 
-            var ultimoRegistro = listaRegistros.LastOrDefault();
-            if (ultimoRegistro < 10000001)
-                profissional.NumeroRegistro = 10000001;
-            else
-                profissional.NumeroRegistro = ultimoRegistro + 1;
+            var ultimoRegistro = Context.Profissionais.Max(p => p.NumeroRegistro);
+
+            profissional.NumeroRegistro = ultimoRegistro == 0 ? 10000001 : ultimoRegistro + 1;
 
             if (!Validacoes.ValidaCPF(profissional.CPF))
                 return BadRequest("CPF inválido!");
