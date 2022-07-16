@@ -63,15 +63,8 @@ namespace Profissionais_CRUD.Controllers
         public async Task<IActionResult> AddProfissional(Profissional profissional)
         {
 
-            List<int> listaRegistros = new List<int>();
-
             if (Context.Profissionais.Any(p => p.NomeCompleto == profissional.NomeCompleto))
                 return BadRequest("Nome de usuário já existente.");
-
-            await foreach (var prof in Context.Profissionais)
-            {
-                listaRegistros.Add(prof.NumeroRegistro);
-            }
 
             var ultimoRegistro = Context.Profissionais.Max(p => p.NumeroRegistro);
 
@@ -89,13 +82,8 @@ namespace Profissionais_CRUD.Controllers
             await Context.SaveChangesAsync();
 
 
-            return Ok(await Context.Profissionais.ToListAsync());
+            return Ok(profissional);
 
-        }
-
-        private object OrderBy(int id)
-        {
-            throw new NotImplementedException();
         }
 
         [HttpPut("id")]
@@ -104,15 +92,8 @@ namespace Profissionais_CRUD.Controllers
             var dbProfissional = await Context.Profissionais.FindAsync(updateQuery.Id);
             if (dbProfissional == null)
                 return BadRequest("Profissional não encontrado");
-
-            dbProfissional.NomeCompleto = updateQuery.NomeCompleto;
-            dbProfissional.CPF = updateQuery.CPF;
-            dbProfissional.DataNascimento = updateQuery.DataNascimento;
-            dbProfissional.Sexo = updateQuery.Sexo;
-            dbProfissional.Ativo = updateQuery.Ativo;
-            dbProfissional.CEP = updateQuery.CEP;
-            dbProfissional.Cidade = updateQuery.Cidade;
-            dbProfissional.ValorRenda = updateQuery.ValorRenda;
+            
+            Context.Profissionais.Update(updateQuery);
 
             await Context.SaveChangesAsync();
 
